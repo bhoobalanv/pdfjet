@@ -210,13 +210,29 @@ public class BigTable {
     private void drawOn(String[] row, int var2) throws Exception {
         if (row.length <= this.headerRow.length) {
             this.page.addArtifactBMC();
+            
+            
+            // --- Begin wrapping logic ---
+            int maxLines = 1;
+            List<List<String>> wrappedCells = new ArrayList<>();
+            for (int i = 0; i < row.length; ++i) {
+                String cell = row[i];
+                float colWidth = (Float) this.vertLines.get(i + 1) - (Float) this.vertLines.get(i) - 2 * this.padding;
+                List<String> wrapped = wrapText(cell, this.f2, colWidth);
+                wrappedCells.add(wrapped);
+                if (wrapped.size() > maxLines) maxLines = wrapped.size();
+            }
+            
+            float lineHeight = this.f2.getBodyHeight();
+            float rowHeight = maxLines * lineHeight;
+            float addedHeight = (maxLines - 1) * lineHeight;
             if (this.highlightRow) {
-                this.drawHighlight(this.page, this.highlightColor, this.f2);
+               
+                this.drawHighlight(this.page, this.highlightColor, this.f2, addedHeight);
                 this.highlightRow = false;
             } else {
                 this.highlightRow = true;
             }
-            
             float[] var3 = this.page.getPenColor();
             this.page.setPenColor(this.penColor);
             this.page.moveTo((Float)this.vertLines.get(0), this.yText - this.f2.ascent);
@@ -231,43 +247,64 @@ public class BigTable {
             this.page.setBrushColor(0);
             float var5 = 0.0F;
             float var6 = 0.0F;
-            
-            for(int var7 = 0; var7 < row.length; ++var7) {
-                String var8 = row[var7];
-                var5 = (Float)this.vertLines.get(var7);
-                var6 = (Float)this.vertLines.get(var7 + 1);
-                this.page.beginText();
-                if (this.align != null && (Integer)this.align.get(var7) != 0) {
-                    if ((Integer)this.align.get(var7) == 1) {
-                        this.page.setTextLocation(var6 - this.padding - this.f2.stringWidth(var8), this.yText);
+
+
+
+            for (int line = 0; line < maxLines; ++line) {
+                for (int var7 = 0; var7 < row.length; ++var7) {
+                    var5 = (Float) this.vertLines.get(var7);
+                    var6 = (Float) this.vertLines.get(var7 + 1);
+                    this.page.beginText();
+                    String text = line < wrappedCells.get(var7).size() ? wrappedCells.get(var7).get(line) : "";
+                    if (this.align != null && (Integer) this.align.get(var7) != 0) {
+                        if ((Integer) this.align.get(var7) == 1) {
+                            this.page.setTextLocation(var6 - this.padding - this.f2.stringWidth(text), this.yText + line * lineHeight);
+                        }
+                    } else {
+                        this.page.setTextLocation(var5 + this.padding, this.yText + line * lineHeight);
                     }
-                } else {
-                    this.page.setTextLocation(var5 + this.padding, this.yText);
+                    this.page.drawText(text);
+                    this.page.endText();
                 }
-                
-                this.page.drawText(var8);
-                this.page.endText();
             }
-            
+            // --- End wrapping logic ---
+
             this.page.addEMC();
             if (var2 != 0) {
                 this.page.addArtifactBMC();
                 float[] var10 = this.page.getPenColor();
                 this.page.setPenColor(var2);
                 this.page.setPenWidth(3.0F);
-                this.page.drawLine((Float)this.vertLines.get(0) - 2.0F, this.yText - this.f2.ascent, (Float)this.vertLines.get(0) - 2.0F, this.yText + this.f2.descent);
-                this.page.drawLine(var6 + 2.0F, this.yText - this.f2.ascent, var6 + 2.0F, this.yText + this.f2.descent);
+                this.page.drawLine((Float) this.vertLines.get(0) - 2.0F, this.yText - this.f2.ascent, (Float) this.vertLines.get(0) - 2.0F, this.yText + addedHeight+2.0F);
+                this.page.drawLine(var6 + 2.0F, this.yText - this.f2.ascent, var6 + 2.0F, this.yText + addedHeight + 2.0F);
                 this.page.setPenColor(var10);
                 this.page.setPenWidth(0.0F);
                 this.page.addEMC();
             }
-            
-            this.yText += this.f2.descent + this.f2.ascent;
+
+            this.yText += rowHeight;
             if (this.yText + this.f2.descent > this.page.height - this.bottomMargin) {
                 this.newPage(row, 0);
             }
-            
         }
+    }
+
+    // Helper method to wrap text within a given width
+    private List<String> wrapText(String text, Font font, float maxWidth) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder currentLine = new StringBuilder();
+        for (String word : text.split(" ")) {
+            String testLine = currentLine.length() == 0 ? word : currentLine + " " + word;
+            if (font.stringWidth(null, testLine) <= maxWidth) {
+                if (currentLine.length() > 0) currentLine.append(" ");
+                currentLine.append(word);
+            } else {
+                if (currentLine.length() > 0) lines.add(currentLine.toString());
+                currentLine = new StringBuilder(word);
+            }
+        }
+        if (currentLine.length() > 0) lines.add(currentLine.toString());
+        return lines;
     }
     
     private void drawHighlight(Page var1, int var2, Font var3) {
@@ -277,6 +314,17 @@ public class BigTable {
         var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - var3.ascent);
         var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText + var3.descent);
         var1.lineTo((Float)this.vertLines.get(0), this.yText + var3.descent);
+        var1.fillPath();
+        var1.setBrushColor(var4);
+    }
+    
+    private void drawHighlight(Page var1, int var2, Font var3,float addedHeight) {
+        float[] var4 = var1.getBrushColor();
+        var1.setBrushColor(var2);
+        var1.moveTo((Float)this.vertLines.get(0), this.yText - var3.ascent);
+        var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - var3.ascent);
+        var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText + var3.descent+ addedHeight);
+        var1.lineTo((Float)this.vertLines.get(0), this.yText + var3.descent+ addedHeight);
         var1.fillPath();
         var1.setBrushColor(var4);
     }
