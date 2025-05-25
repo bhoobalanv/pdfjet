@@ -29,12 +29,18 @@ public class BigTable {
     private boolean autoCalcuateColumnWidths = true;
     private int autoCalculateBufferSize = 10;
     private List<String[]> bufferedRows = new ArrayList();
+    private float maxWidth = 200.0F;
     
     public BigTable(PDF var1, Font var2, Font var3, float[] var4) {
+        this(var1, var2, var3);
+        this.pageSize = var4;
+        
+    }
+    
+    public BigTable(PDF var1, Font var2, Font var3) {
         this.pdf = var1;
         this.f1 = var2;
         this.f2 = var3;
-        this.pageSize = var4;
         this.pages = new ArrayList();
     }
     
@@ -75,6 +81,11 @@ public class BigTable {
         
     }
     
+    public void setAutoCalcuateColumnWidths(boolean var1)
+    {
+        this.autoCalcuateColumnWidths = var1;
+    } // autoCalcuateColumnWidths
+    
     public void drawRow(String[] var1, int var2) throws Exception {
         if (this.autoCalcuateColumnWidths && this.vertLines == null) {
             // Buffer rows until we reach the specified buffer size
@@ -110,6 +121,7 @@ public class BigTable {
         }
         
         // Set the calculated column widths
+        
         setColumnWidths(widths);
         
         // Automatically calculate and set page size based on column widths
@@ -161,7 +173,7 @@ public class BigTable {
             
             for(int var4 = 0; var4 <= this.headerRow.length; ++var4) {
                 this.page.drawLine((Float)this.vertLines.get(var4), this.y1, (Float)this.vertLines.get(var4), this.yText - this.f1.ascent);
-            }
+        }
             
             this.page.setPenColor(var3);
             this.page.addEMC();
@@ -288,7 +300,7 @@ public class BigTable {
             }
         }
     }
-
+    
     // Helper method to wrap text within a given width
     private List<String> wrapText(String text, Font font, float maxWidth) {
         List<String> lines = new ArrayList<>();
@@ -363,6 +375,9 @@ public class BigTable {
         for(int i = 0; i < rowData.length; ++i) {
             String cell = rowData[i];
             float width = this.f1.stringWidth((Font)null, cell);
+            if (width > this.maxWidth) {
+                width = this.maxWidth;
+            }
             if (rowIndex == 0) {
                 widths.add(width);
             } else if (i < widths.size() && width > (Float)widths.get(i)) {
