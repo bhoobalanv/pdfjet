@@ -175,8 +175,8 @@ public class BigTable {
             
             for(int var4 = 0; var4 <= this.headerRow.length; ++var4) {
                 this.page.drawLine((Float)this.vertLines.get(var4), this.y1, (Float)this.vertLines.get(var4), this.yText - this.f1.ascent);
-        }
-            
+             }
+
             this.page.setPenColor(var3);
             this.page.addEMC();
         }
@@ -192,11 +192,11 @@ public class BigTable {
         float[] wrapMeasures = getWrappedCells(wrappedCells, this.headerRow);
         
         
-        this.drawHighlight(this.page, this.highlightColor, this.f1, wrapMeasures[2]);
+        this.drawHighlight(this.page, this.highlightColor, this.f1, wrapMeasures[2],-1f);
         this.highlightRow = false;
         float[] var9 = this.page.getPenColor();
         this.page.setPenColor(this.penColor);
-        this.page.drawLine((Float)this.vertLines.get(0) , this.yText - this.f1.ascent, (Float)this.vertLines.get(this.headerRow.length), this.yText - this.f1.ascent + 2.0F);
+        this.page.drawLine((Float)this.vertLines.get(0) , this.yText - this.f1.ascent, (Float)this.vertLines.get(this.headerRow.length), this.yText - this.f1.ascent );
         
         this.page.setPenColor(var9);
         this.page.addEMC();
@@ -229,15 +229,15 @@ public class BigTable {
             float lineHeight = this.f2.getBodyHeight();
             if (this.highlightRow) {
                
-                this.drawHighlight(this.page, this.highlightColor, this.f2, wrapMeasures[2]);
+                this.drawHighlight(this.page, this.highlightColor, this.f2, wrapMeasures[2],padding);
                 this.highlightRow = false;
             } else {
                 this.highlightRow = true;
             }
             float[] var3 = this.page.getPenColor();
             this.page.setPenColor(this.penColor);
-            this.page.moveTo((Float)this.vertLines.get(0), this.yText - this.f2.ascent);
-            this.page.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - this.f2.ascent);
+            this.page.moveTo((Float)this.vertLines.get(0), this.yText - this.f2.ascent+padding);
+            this.page.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - this.f2.ascent+padding);
             this.page.strokePath();
             this.page.setPenColor(var3);
             this.page.addEMC();
@@ -258,7 +258,7 @@ public class BigTable {
                 this.page.setPenWidth(3.0F);
                 float var6 = (Float) this.vertLines.get(row.length);
                 this.page.drawLine((Float) this.vertLines.get(0) - 2.0F, this.yText - this.f2.ascent, (Float) this.vertLines.get(0) - 2.0F, this.yText + wrapMeasures[2] + 2.0F);
-                this.page.drawLine(var6 + 2.0F, this.yText - this.f2.ascent, var6 + 2.0F, this.yText + wrapMeasures[2] + 2.0F);
+                this.page.drawLine(var6 + 2.0F, this.yText - this.f2.ascent +padding, var6 + 2.0F, this.yText + wrapMeasures[2] + 2.0F);
                 this.page.setPenColor(var10);
                 this.page.setPenWidth(0.0F);
                 this.page.addEMC();
@@ -288,10 +288,10 @@ public class BigTable {
                 String text = line < wrappedCells.get(var7).size() ? wrappedCells.get(var7).get(line) : "";
                 if (this.align != null && (Integer) this.align.get(var7) != 0) {
                     if ((Integer) this.align.get(var7) == 1) {
-                        this.page.setTextLocation(var6 - this.padding - font.stringWidth(text), this.yText + line * lineHeight);
+                        this.page.setTextLocation(var6 - this.padding - font.stringWidth(text), this.yText + line * lineHeight+padding);
                     }
                 } else {
-                    this.page.setTextLocation(var5 + this.padding, this.yText + line * lineHeight);
+                    this.page.setTextLocation(var5 + this.padding, this.yText + line * lineHeight+padding);
                 }
                 this.page.drawText(text);
                 this.page.endText();
@@ -477,13 +477,13 @@ public class BigTable {
         }
     }
     
-    private void drawHighlight(Page var1, int var2, Font var3,float addedHeight) {
+    private void drawHighlight(Page var1, int var2, Font var3,float addedHeight,float startPadding) {
         float[] var4 = var1.getBrushColor();
         var1.setBrushColor(var2);
-        var1.moveTo((Float)this.vertLines.get(0), this.yText - var3.ascent);
-        var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - var3.ascent);
-        var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText + var3.descent+ addedHeight);
-        var1.lineTo((Float)this.vertLines.get(0), this.yText + var3.descent+ addedHeight);
+        var1.moveTo((Float)this.vertLines.get(0), this.yText - var3.ascent+ (startPadding!=-1f?startPadding:0));
+        var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - var3.ascent+ (startPadding!=-1f?startPadding:0));
+        var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText + var3.descent+ addedHeight +padding);
+        var1.lineTo((Float)this.vertLines.get(0), this.yText + var3.descent+ addedHeight +padding);
         var1.fillPath();
         var1.setBrushColor(var4);
     }
