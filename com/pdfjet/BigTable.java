@@ -112,14 +112,21 @@ public class BigTable {
         // Set the calculated column widths
         setColumnWidths(widths);
         
+        // Automatically calculate and set page size based on column widths
+        float totalWidth = 0f;
+        for (Float w : widths) {
+            totalWidth += w;
+        }
+        totalWidth += (widths.size() - 1) * this.spacing + 2 * this.x1; // Add spacing and left/right margins
+        if (this.pageSize != null && this.pageSize.length == 2) {
+            this.pageSize[0] = totalWidth;
+        } else {
+            this.pageSize = new float[] { totalWidth, 612f }; // Default height if not set
+        }
+        
         // Draw the buffered rows
         for (String[] row : this.bufferedRows) {
-            if (this.headerRow == null) {
-                this.headerRow = row;
-                this.newPage(row, 0);
-            } else {
-                this.drawOn(row, 0);
-            }
+            drawRow(row, 0);
         }
         
         // Clear the buffer
@@ -127,7 +134,12 @@ public class BigTable {
     }
     
     public void complete() {
-        this.page.addArtifactBMC();
+       try {
+           flushBuffer();
+       }catch (Exception e) {
+           throw new RuntimeException("Failed to flush buffer", e);
+       }
+           this.page.addArtifactBMC();
         float[] var1 = this.page.getPenColor();
         this.page.setPenColor(this.penColor);
         this.page.drawLine((Float)this.vertLines.get(0), this.yText - this.f2.ascent, (Float)this.vertLines.get(this.headerRow.length), this.yText - this.f2.ascent);
@@ -195,8 +207,8 @@ public class BigTable {
         this.yText += this.f1.descent + this.f2.ascent;
     }
     
-    private void drawOn(String[] var1, int var2) throws Exception {
-        if (var1.length <= this.headerRow.length) {
+    private void drawOn(String[] row, int var2) throws Exception {
+        if (row.length <= this.headerRow.length) {
             this.page.addArtifactBMC();
             if (this.highlightRow) {
                 this.drawHighlight(this.page, this.highlightColor, this.f2);
@@ -212,7 +224,7 @@ public class BigTable {
             this.page.strokePath();
             this.page.setPenColor(var3);
             this.page.addEMC();
-            String var4 = this.getRowText(var1);
+            String var4 = this.getRowText(row);
             this.page.addBMC("P", this.language, var4, var4);
             this.page.setPenWidth(0.0F);
             this.page.setTextFont(this.f2);
@@ -220,8 +232,8 @@ public class BigTable {
             float var5 = 0.0F;
             float var6 = 0.0F;
             
-            for(int var7 = 0; var7 < var1.length; ++var7) {
-                String var8 = var1[var7];
+            for(int var7 = 0; var7 < row.length; ++var7) {
+                String var8 = row[var7];
                 var5 = (Float)this.vertLines.get(var7);
                 var6 = (Float)this.vertLines.get(var7 + 1);
                 this.page.beginText();
@@ -252,7 +264,7 @@ public class BigTable {
             
             this.yText += this.f2.descent + this.f2.ascent;
             if (this.yText + this.f2.descent > this.page.height - this.bottomMargin) {
-                this.newPage(var1, 0);
+                this.newPage(row, 0);
             }
             
         }
@@ -281,6 +293,9 @@ public class BigTable {
     }
     
     public List<Float> getColumnWidths(String var1) throws IOException {
+      if(vertLines != null) {
+            return vertLines;
+        }
         BufferedReader reader = new BufferedReader(new FileReader(var1));
         ArrayList<Float> widths = new ArrayList<Float>();
         this.align = new ArrayList<Integer>();
