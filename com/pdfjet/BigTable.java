@@ -165,6 +165,8 @@ public class BigTable {
     }
     
     private void newPage(String[] var1, int var2) throws Exception {
+       
+       
         if (this.page != null) {
             this.page.addArtifactBMC();
             float[] var3 = this.page.getPenColor();
@@ -184,63 +186,50 @@ public class BigTable {
         this.page.setPenWidth(0.0F);
         this.yText = this.y1 + this.f1.ascent;
         this.page.addArtifactBMC();
-        this.drawHighlight(this.page, this.highlightColor, this.f1);
+        
+        // --- Begin wrapping logic ---
+        List<List<String>> wrappedCells = new ArrayList<>();
+        float[] wrapMeasures = getWrappedCells(wrappedCells, this.headerRow);
+        
+        
+        this.drawHighlight(this.page, this.highlightColor, this.f1, wrapMeasures[2]);
         this.highlightRow = false;
         float[] var9 = this.page.getPenColor();
         this.page.setPenColor(this.penColor);
-        this.page.drawLine((Float)this.vertLines.get(0), this.yText - this.f1.ascent, (Float)this.vertLines.get(this.headerRow.length), this.yText - this.f1.ascent);
+        this.page.drawLine((Float)this.vertLines.get(0) , this.yText - this.f1.ascent, (Float)this.vertLines.get(this.headerRow.length), this.yText - this.f1.ascent + 2.0F);
+        
         this.page.setPenColor(var9);
         this.page.addEMC();
         String var10 = this.getRowText(this.headerRow);
         this.page.addBMC("P", this.language, var10, var10);
         this.page.setTextFont(this.f1);
         this.page.setBrushColor(var2);
-        float var5 = 0.0F;
-        float var6 = 0.0F;
         
-        for(int var7 = 0; var7 < this.headerRow.length; ++var7) {
-            String var8 = this.headerRow[var7];
-            var5 = (Float)this.vertLines.get(var7);
-            var6 = (Float)this.vertLines.get(var7 + 1);
-            this.page.beginText();
-            if (this.align != null && (Integer)this.align.get(var7) != 0) {
-                if ((Integer)this.align.get(var7) == 1) {
-                    this.page.setTextLocation(var6 - this.padding - this.f1.stringWidth(var8), this.yText);
-                }
-            } else {
-                this.page.setTextLocation(var5 + this.padding, this.yText);
-            }
-            
-            this.page.drawText(var8);
-            this.page.endText();
-        }
+
+        float lineHeight = this.f1.getBodyHeight();
+        
+        drawWrappedCells(this.headerRow, wrappedCells, wrapMeasures, this.f1, lineHeight);
+        // --- End wrapping logic ---
         
         this.page.addEMC();
-        this.yText += this.f1.descent + this.f2.ascent;
+        this.yText += this.f1.descent + this.f2.ascent + wrapMeasures[2];
     }
     
     private void drawOn(String[] row, int var2) throws Exception {
         if (row.length <= this.headerRow.length) {
+            
+            List<List<String>> wrappedCells = new ArrayList<>();
+            float[] wrapMeasures = getWrappedCells(wrappedCells, row);
+            
+            if (this.yText + wrapMeasures[2] > this.page.height - this.bottomMargin) {
+                this.newPage(row, 0);
+            }
             this.page.addArtifactBMC();
             
-            
-            // --- Begin wrapping logic ---
-            int maxLines = 1;
-            List<List<String>> wrappedCells = new ArrayList<>();
-            for (int i = 0; i < row.length; ++i) {
-                String cell = row[i];
-                float colWidth = (Float) this.vertLines.get(i + 1) - (Float) this.vertLines.get(i) - 2 * this.padding;
-                List<String> wrapped = wrapText(cell, this.f2, colWidth);
-                wrappedCells.add(wrapped);
-                if (wrapped.size() > maxLines) maxLines = wrapped.size();
-            }
-            
             float lineHeight = this.f2.getBodyHeight();
-            float rowHeight = maxLines * lineHeight;
-            float addedHeight = (maxLines - 1) * lineHeight;
             if (this.highlightRow) {
                
-                this.drawHighlight(this.page, this.highlightColor, this.f2, addedHeight);
+                this.drawHighlight(this.page, this.highlightColor, this.f2, wrapMeasures[2]);
                 this.highlightRow = false;
             } else {
                 this.highlightRow = true;
@@ -257,28 +246,8 @@ public class BigTable {
             this.page.setPenWidth(0.0F);
             this.page.setTextFont(this.f2);
             this.page.setBrushColor(0);
-            float var5 = 0.0F;
-            float var6 = 0.0F;
-
-
-
-            for (int line = 0; line < maxLines; ++line) {
-                for (int var7 = 0; var7 < row.length; ++var7) {
-                    var5 = (Float) this.vertLines.get(var7);
-                    var6 = (Float) this.vertLines.get(var7 + 1);
-                    this.page.beginText();
-                    String text = line < wrappedCells.get(var7).size() ? wrappedCells.get(var7).get(line) : "";
-                    if (this.align != null && (Integer) this.align.get(var7) != 0) {
-                        if ((Integer) this.align.get(var7) == 1) {
-                            this.page.setTextLocation(var6 - this.padding - this.f2.stringWidth(text), this.yText + line * lineHeight);
-                        }
-                    } else {
-                        this.page.setTextLocation(var5 + this.padding, this.yText + line * lineHeight);
-                    }
-                    this.page.drawText(text);
-                    this.page.endText();
-                }
-            }
+            
+            drawWrappedCells(row, wrappedCells, wrapMeasures, this.f2, lineHeight);
             // --- End wrapping logic ---
 
             this.page.addEMC();
@@ -287,47 +256,225 @@ public class BigTable {
                 float[] var10 = this.page.getPenColor();
                 this.page.setPenColor(var2);
                 this.page.setPenWidth(3.0F);
-                this.page.drawLine((Float) this.vertLines.get(0) - 2.0F, this.yText - this.f2.ascent, (Float) this.vertLines.get(0) - 2.0F, this.yText + addedHeight+2.0F);
-                this.page.drawLine(var6 + 2.0F, this.yText - this.f2.ascent, var6 + 2.0F, this.yText + addedHeight + 2.0F);
+                float var6 = (Float) this.vertLines.get(row.length);
+                this.page.drawLine((Float) this.vertLines.get(0) - 2.0F, this.yText - this.f2.ascent, (Float) this.vertLines.get(0) - 2.0F, this.yText + wrapMeasures[2] + 2.0F);
+                this.page.drawLine(var6 + 2.0F, this.yText - this.f2.ascent, var6 + 2.0F, this.yText + wrapMeasures[2] + 2.0F);
                 this.page.setPenColor(var10);
                 this.page.setPenWidth(0.0F);
                 this.page.addEMC();
             }
 
-            this.yText += rowHeight;
+            this.yText += wrapMeasures[1];
             if (this.yText + this.f2.descent > this.page.height - this.bottomMargin) {
                 this.newPage(row, 0);
             }
         }
     }
     
-    // Helper method to wrap text within a given width
-    private List<String> wrapText(String text, Font font, float maxWidth) {
-        List<String> lines = new ArrayList<>();
-        StringBuilder currentLine = new StringBuilder();
-        for (String word : text.split(" ")) {
-            String testLine = currentLine.length() == 0 ? word : currentLine + " " + word;
-            if (font.stringWidth(null, testLine) <= maxWidth) {
-                if (currentLine.length() > 0) currentLine.append(" ");
-                currentLine.append(word);
-            } else {
-                if (currentLine.length() > 0) lines.add(currentLine.toString());
-                currentLine = new StringBuilder(word);
+    /**
+     * Draws wrapped cells on the current page
+     * @param row The row data to draw
+     * @param wrappedCells The list of wrapped cell content
+     * @param wrapMeasures Measurements for wrapped content [maxLines, rowHeight, addedHeight]
+     * @param font The font to use for drawing
+     * @param lineHeight The line height for text
+     */
+    private void drawWrappedCells(String[] row, List<List<String>> wrappedCells, float[] wrapMeasures, Font font, float lineHeight) {
+        for (int line = 0; line < wrapMeasures[0]; ++line) {
+            for (int var7 = 0; var7 < row.length; ++var7) {
+                float var5 = (Float) this.vertLines.get(var7);
+                float var6 = (Float) this.vertLines.get(var7 + 1);
+                this.page.beginText();
+                String text = line < wrappedCells.get(var7).size() ? wrappedCells.get(var7).get(line) : "";
+                if (this.align != null && (Integer) this.align.get(var7) != 0) {
+                    if ((Integer) this.align.get(var7) == 1) {
+                        this.page.setTextLocation(var6 - this.padding - font.stringWidth(text), this.yText + line * lineHeight);
+                    }
+                } else {
+                    this.page.setTextLocation(var5 + this.padding, this.yText + line * lineHeight);
+                }
+                this.page.drawText(text);
+                this.page.endText();
             }
         }
-        if (currentLine.length() > 0) lines.add(currentLine.toString());
+    }
+    
+    /**
+     * Computes the measurements for the wrapped cells
+     * @param wrappedCells The list of wrapped cell content
+     * @param row The row data to wrap
+     * @return An array of measurements for the wrapped content [maxLines, rowHeight, addedHeight]
+     */
+    private float[] getWrappedCells(List<List<String>> wrappedCells, String[] row) {
+        float maxLines = 1;
+        for (int i = 0; i < row.length; ++i) {
+            String cell = row[i];
+            float colWidth = (Float) this.vertLines.get(i + 1) - (Float) this.vertLines.get(i) - 2 * this.padding;
+            List<String> wrapped = wrapText(cell, this.f2, colWidth);
+            wrappedCells.add(wrapped);
+            if (wrapped.size() > maxLines) maxLines = wrapped.size();
+        }
+        float lineHeight = this.f2.getBodyHeight();
+        float rowHeight = maxLines * lineHeight + this.padding ;
+        float addedHeight = (maxLines - 1) * lineHeight + padding;
+        return new float[]{maxLines, rowHeight, addedHeight};
+    }
+    
+    
+    private List<String> wrapText(String text, Font font, float maxWidth) {
+        List<String> lines = new ArrayList<>();
+        
+        // If text is empty, return empty list
+        if (text == null || text.isEmpty()) {
+            return lines;
+        }
+        
+        // Check if the entire text exceeds maxWidth
+        if (font.stringWidth(null, text) <= maxWidth) {
+            // Text fits in one line, no need to wrap
+            lines.add(text);
+            return lines;
+        }
+        
+        // Text needs wrapping - calculate approximate characters that fit per line
+        float avgCharWidth = font.stringWidth(null, "m"); // Use 'm' as an average character
+        int charsPerLine = Math.max(1, (int)(maxWidth / avgCharWidth));
+        
+        // Process text character by character to create lines
+        int textLength = text.length();
+        int startPos = 0;
+        
+        while (startPos < textLength) {
+            // Initial estimate of end position
+            int endPos = Math.min(startPos + charsPerLine, textLength);
+            
+            // If we're not at the end of text, try to break at a space
+            if (endPos < textLength) {
+                // Look for the last space within our estimated range
+                int lastSpace = text.lastIndexOf(' ', endPos);
+                
+                // If we found a space in our range, break there
+//                if (lastSpace > startPos) {
+//                    endPos = lastSpace;
+//                } else {
+                    // No space found, check if the current segment fits
+                    String segment = text.substring(startPos, endPos);
+                    
+                    // Fine-tune to ensure the segment fits
+                     float segmentWidth = font.stringWidth(null, segment);
+                     if( segmentWidth > maxWidth) {
+                        // If the segment is too wide, reduce endPos until it fits
+                        while (endPos > startPos + 1 && segmentWidth > maxWidth) {
+                            endPos--;
+                            segment = text.substring(startPos, endPos);
+                            segmentWidth = font.stringWidth(null, segment);
+                        }
+                    }else {
+                        
+                        
+                        // If the segment fits, reduce endPos until it doesn't
+                             if (endPos > startPos + 1 && segmentWidth <= maxWidth) {
+                                 float diff = maxWidth - segmentWidth;
+                                 float v = segmentWidth / segment.length();
+                                 endPos =Math.min( endPos + Math.round(diff / v) - 1, textLength);
+                                 segment = endPos < textLength ? text.substring(startPos, endPos) : text.substring(startPos);
+                                 segmentWidth = font.stringWidth(null, segment);
+                             }
+                             //TODO if only one spcae is present and the word is too long to hold in single, the word in break after inserting new line.
+                            //we can break along with the single word itself.
+                             if(segmentWidth > maxWidth || textLength>endPos+1&& Character.isLetter(text.charAt(endPos+1))) {
+                                 int lastSpaceIndex = segment.lastIndexOf(" ");
+                                 if (lastSpaceIndex != -1) {
+                                     endPos = startPos + lastSpaceIndex;
+                                 }
+                             }
+                    }
+                    
+                  
+//                }
+            }
+            
+            // Add the line
+            String line = text.substring(startPos, endPos).trim();
+            if (!line.isEmpty()) {
+                lines.add(line);
+            }
+            
+            // Move to next position (skip the space if we broke at one)
+            startPos = (endPos < textLength && text.charAt(endPos) == ' ') ? endPos + 1 : endPos;
+        }
+        
         return lines;
     }
     
-    private void drawHighlight(Page var1, int var2, Font var3) {
-        float[] var4 = var1.getBrushColor();
-        var1.setBrushColor(var2);
-        var1.moveTo((Float)this.vertLines.get(0), this.yText - var3.ascent);
-        var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - var3.ascent);
-        var1.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText + var3.descent);
-        var1.lineTo((Float)this.vertLines.get(0), this.yText + var3.descent);
-        var1.fillPath();
-        var1.setBrushColor(var4);
+    // Helper method to wrap text within a given width
+//    private List<String> wrapText(String text, Font font, float maxWidth) {
+//        List<String> lines = new ArrayList<>();
+//
+//        // Calculate approximate characters that fit per line based on font metrics
+//        float avgCharWidth = font.stringWidth(null, "m"); // Use 'm' as an average character
+//        int charsPerLine = Math.max(1, (int)(maxWidth / avgCharWidth));
+//
+//        // Split text into words
+//        String[] words = text.split(" ");
+//        StringBuilder currentLine = new StringBuilder();
+//
+//        for (String word : words) {
+//            // If current line is empty, try to add the word
+//            if (currentLine.length() == 0) {
+//                // Check if the word itself exceeds maxWidth
+//                if (font.stringWidth(null, word) > maxWidth) {
+//                    // Break the word into chunks that fit
+//                    breakWordIntoLines(word, font, maxWidth, charsPerLine, lines);
+//                } else {
+//                    currentLine.append(word);
+//                }
+//            } else {
+//                // Try adding the word to the current line
+//                String testLine = currentLine + " " + word;
+//                if (font.stringWidth(null, testLine) <= maxWidth) {
+//                    currentLine.append(" ").append(word);
+//                } else {
+//                    // Current line is full, add it to lines and start a new line
+//                    lines.add(currentLine.toString());
+//                    currentLine = new StringBuilder();
+//
+//                    // Now handle the word for the new line
+//                    if (font.stringWidth(null, word) > maxWidth) {
+//                        // Break the word into chunks that fit
+//                        breakWordIntoLines(word, font, maxWidth, charsPerLine, lines);
+//                    } else {
+//                        currentLine.append(word);
+//                    }
+//                }
+//            }
+//        }
+//
+//        // Add the last line if it's not empty
+//        if (currentLine.length() > 0) {
+//            lines.add(currentLine.toString());
+//        }
+//
+//        return lines;
+//    }
+//
+    // Helper method to break a word into multiple lines
+    private void breakWordIntoLines(String word, Font font, float maxWidth, int charsPerLine, List<String> lines) {
+        int start = 0;
+        while (start < word.length()) {
+            // Initial estimate of how many characters might fit
+            int end = Math.min(start + charsPerLine, word.length());
+            
+            // Fine-tune to ensure the segment fits
+            String part = word.substring(start, end);
+            while (end > start + 1 && font.stringWidth(null, part) > maxWidth) {
+                end--;
+                part = word.substring(start, end);
+            }
+            
+            lines.add(part);
+            start = end;
+        }
     }
     
     private void drawHighlight(Page var1, int var2, Font var3,float addedHeight) {
