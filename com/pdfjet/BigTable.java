@@ -100,7 +100,7 @@ public class BigTable {
         
         if (this.headerRow == null) {
             this.headerRow = var1;
-            this.newPage(var1, 0);
+            this.newPage( 0);
         } else {
             this.drawOn(var1, var2);
         }
@@ -164,17 +164,19 @@ public class BigTable {
         this.page.addEMC();
     }
     
-    private void newPage(String[] var1, int var2) throws Exception {
+    private void newPage( int var2) throws Exception {
        
        
         if (this.page != null) {
             this.page.addArtifactBMC();
             float[] var3 = this.page.getPenColor();
             this.page.setPenColor(this.penColor);
-            this.page.drawLine((Float)this.vertLines.get(0), this.yText - this.f1.ascent, (Float)this.vertLines.get(this.headerRow.length), this.yText - this.f1.ascent);
+            //bottom border line
+            this.page.drawLine((Float)this.vertLines.get(0), this.yText - this.f1.ascent +padding, (Float)this.vertLines.get(this.headerRow.length), this.yText - this.f1.ascent +padding);
             
             for(int var4 = 0; var4 <= this.headerRow.length; ++var4) {
-                this.page.drawLine((Float)this.vertLines.get(var4), this.y1, (Float)this.vertLines.get(var4), this.yText - this.f1.ascent);
+                //vertical lines
+                this.page.drawLine((Float)this.vertLines.get(var4), this.y1, (Float)this.vertLines.get(var4), this.yText - this.f1.ascent+padding);
              }
 
             this.page.setPenColor(var3);
@@ -196,6 +198,7 @@ public class BigTable {
         this.highlightRow = false;
         float[] var9 = this.page.getPenColor();
         this.page.setPenColor(this.penColor);
+        //Table top border
         this.page.drawLine((Float)this.vertLines.get(0) , this.yText - this.f1.ascent, (Float)this.vertLines.get(this.headerRow.length), this.yText - this.f1.ascent );
         
         this.page.setPenColor(var9);
@@ -208,7 +211,7 @@ public class BigTable {
 
         float lineHeight = this.f1.getBodyHeight();
         
-        drawWrappedCells(this.headerRow, wrappedCells, wrapMeasures, this.f1, lineHeight);
+        drawWrappedCells(this.headerRow, wrappedCells, wrapMeasures[0], this.f1, lineHeight);
         // --- End wrapping logic ---
         
         this.page.addEMC();
@@ -220,54 +223,99 @@ public class BigTable {
             
             List<List<String>> wrappedCells = new ArrayList<>();
             float[] wrapMeasures = getWrappedCells(wrappedCells, row);
+           processRows(wrappedCells, wrapMeasures, row, var2);
+        }
+    }
+    
+    private void processRows(List<List<String>> wrappedCells, float[] wrapMeasures, String[]row, int var2) throws Exception
+    {
+        if (this.yText + wrapMeasures[2] > this.page.height - this.bottomMargin) {
+            float balaneSpace = this.page.height - this.bottomMargin - this.yText;
+            float linesLeft = wrapMeasures[0];
+            float rowHeight = this.f2.getBodyHeight();
+            float linesCanWritten = balaneSpace / rowHeight;
+            System.out.println("Lines can be written: " + linesCanWritten + ", Lines left: " + linesLeft);
             
-            if (this.yText + wrapMeasures[2] > this.page.height - this.bottomMargin) {
-                this.newPage(row, 0);
+            int round = Math.round(linesCanWritten);
+            List<List<String>> trimmedWrappedCells = new ArrayList<>();
+            List<List<String>> unwritten = new ArrayList<>();
+            int unwrittenMaxLines = 1;
+            for (int i = 0;  i < wrappedCells.size(); i++) {
+                List<String> strings = wrappedCells.get(i);
+                if (strings.size() > round) {
+                    List<String> trimmed = strings.subList(0, round+1);
+                    List<String> strings1 = strings.subList(round+1, strings.size());
+                    trimmedWrappedCells.add(trimmed);
+                    unwritten.add(strings1);
+                    if (strings1.size() > unwrittenMaxLines) {
+                        unwrittenMaxLines = strings1.size();
+                    }
+                }
+                else {
+                    trimmedWrappedCells.add(strings);
+                    unwritten.add(new ArrayList<>());
+                }
             }
+            this.drawRowContent(trimmedWrappedCells, wrapMeasures, row, var2, round);
+            if(unwrittenMaxLines > 0) {
+                wrapMeasures[0] = unwrittenMaxLines;
+                wrapMeasures[1] = unwrittenMaxLines * rowHeight + this.padding ;
+                wrapMeasures[2] = (unwrittenMaxLines - 1) * rowHeight + padding;
+                processRows(unwritten, wrapMeasures, row, var2);
+            }
+        }
+        else
+        {
+            this.drawRowContent(wrappedCells, wrapMeasures, row, var2,-1);
+        }
+        
+    }
+    
+    private void drawRowContent(List<List<String>> wrappedCells, float[] wrapMeasures, String[] row, int var2, int linesCanBeWritten) throws Exception
+    {
+        this.page.addArtifactBMC();
+        
+        float lineHeight = this.f2.getBodyHeight();
+        if (this.highlightRow) {
+            
+            this.drawHighlight(this.page, this.highlightColor, this.f2, wrapMeasures[2],padding);
+            this.highlightRow = false;
+        } else {
+            this.highlightRow = true;
+        }
+        float[] var3 = this.page.getPenColor();
+        this.page.setPenColor(this.penColor);
+        this.page.moveTo((Float)this.vertLines.get(0), this.yText - this.f2.ascent+padding);
+        this.page.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - this.f2.ascent+padding);
+        this.page.strokePath();
+        this.page.setPenColor(var3);
+        this.page.addEMC();
+        String var4 = this.getRowText(row);
+        // this.page.addBMC("P", this.language, var4, var4);
+        this.page.setPenWidth(0.0F);
+        this.page.setTextFont(this.f2);
+        this.page.setBrushColor(0);
+        
+        drawWrappedCells(row, wrappedCells, wrapMeasures[0], this.f2, lineHeight);
+        // --- End wrapping logic ---
+        
+        this.page.addEMC();
+        if (var2 != 0) {
             this.page.addArtifactBMC();
-            
-            float lineHeight = this.f2.getBodyHeight();
-            if (this.highlightRow) {
-               
-                this.drawHighlight(this.page, this.highlightColor, this.f2, wrapMeasures[2],padding);
-                this.highlightRow = false;
-            } else {
-                this.highlightRow = true;
-            }
-            float[] var3 = this.page.getPenColor();
-            this.page.setPenColor(this.penColor);
-            this.page.moveTo((Float)this.vertLines.get(0), this.yText - this.f2.ascent+padding);
-            this.page.lineTo((Float)this.vertLines.get(this.headerRow.length), this.yText - this.f2.ascent+padding);
-            this.page.strokePath();
-            this.page.setPenColor(var3);
-            this.page.addEMC();
-            String var4 = this.getRowText(row);
-            this.page.addBMC("P", this.language, var4, var4);
+            float[] var10 = this.page.getPenColor();
+            this.page.setPenColor(var2);
+            this.page.setPenWidth(3.0F);
+            float var6 = (Float) this.vertLines.get(row.length);
+            this.page.drawLine((Float) this.vertLines.get(0) - 2.0F, this.yText - this.f2.ascent, (Float) this.vertLines.get(0) - 2.0F, this.yText + wrapMeasures[2] + 2.0F);
+            this.page.drawLine(var6 + 2.0F, this.yText - this.f2.ascent +padding, var6 + 2.0F, this.yText + wrapMeasures[2] + 2.0F);
+            this.page.setPenColor(var10);
             this.page.setPenWidth(0.0F);
-            this.page.setTextFont(this.f2);
-            this.page.setBrushColor(0);
-            
-            drawWrappedCells(row, wrappedCells, wrapMeasures, this.f2, lineHeight);
-            // --- End wrapping logic ---
-
             this.page.addEMC();
-            if (var2 != 0) {
-                this.page.addArtifactBMC();
-                float[] var10 = this.page.getPenColor();
-                this.page.setPenColor(var2);
-                this.page.setPenWidth(3.0F);
-                float var6 = (Float) this.vertLines.get(row.length);
-                this.page.drawLine((Float) this.vertLines.get(0) - 2.0F, this.yText - this.f2.ascent, (Float) this.vertLines.get(0) - 2.0F, this.yText + wrapMeasures[2] + 2.0F);
-                this.page.drawLine(var6 + 2.0F, this.yText - this.f2.ascent +padding, var6 + 2.0F, this.yText + wrapMeasures[2] + 2.0F);
-                this.page.setPenColor(var10);
-                this.page.setPenWidth(0.0F);
-                this.page.addEMC();
-            }
-
-            this.yText += wrapMeasures[1];
-            if (this.yText + this.f2.descent > this.page.height - this.bottomMargin) {
-                this.newPage(row, 0);
-            }
+        }
+        
+        this.yText += wrapMeasures[1];
+        if (this.yText + this.f2.descent > this.page.height - this.bottomMargin) {
+            this.newPage( 0);
         }
     }
     
@@ -279,13 +327,18 @@ public class BigTable {
      * @param font The font to use for drawing
      * @param lineHeight The line height for text
      */
-    private void drawWrappedCells(String[] row, List<List<String>> wrappedCells, float[] wrapMeasures, Font font, float lineHeight) {
-        for (int line = 0; line < wrapMeasures[0]; ++line) {
+    private void drawWrappedCells(String[] row, List<List<String>> wrappedCells, float maxLines, Font font, float lineHeight) {
+        for (int line = 0; line < maxLines; ++line) {
             for (int var7 = 0; var7 < row.length; ++var7) {
                 float var5 = (Float) this.vertLines.get(var7);
                 float var6 = (Float) this.vertLines.get(var7 + 1);
+               
+                String text = line < wrappedCells.get(var7).size() ? (wrappedCells.get(var7).get(line) != null ? wrappedCells.get(var7).get(line) : "-") : null;
+                if( text == null || text.isEmpty()) {
+                    //this.page.endText();
+                    continue;
+                }
                 this.page.beginText();
-                String text = line < wrappedCells.get(var7).size() ? wrappedCells.get(var7).get(line) : "";
                 if (this.align != null && (Integer) this.align.get(var7) != 0) {
                     if ((Integer) this.align.get(var7) == 1) {
                         this.page.setTextLocation(var6 - this.padding - font.stringWidth(text), this.yText + line * lineHeight+padding);
@@ -373,7 +426,7 @@ public class BigTable {
                         
                         
                         // If the segment fits, reduce endPos until it doesn't
-                             if (endPos > startPos + 1 && segmentWidth <= maxWidth) {
+                             if (endPos > startPos + 1 && (segmentWidth) <= maxWidth) {
                                  float diff = maxWidth - segmentWidth;
                                  float v = segmentWidth / segment.length();
                                  endPos =Math.min( endPos + Math.round(diff / v) - 1, textLength);
@@ -526,9 +579,9 @@ public class BigTable {
                 width = this.maxWidth;
             }
             if (rowIndex == 0) {
-                widths.add(width);
+                widths.add(width+padding);
             } else if (i < widths.size() && width > (Float)widths.get(i)) {
-                widths.set(i, width);
+                widths.set(i, width+padding);
             }
         }
         
