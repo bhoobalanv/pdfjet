@@ -567,7 +567,7 @@ public class Table {
      *
      * @return whether the table has more data to be drawn on a page.
      */
-    private boolean hasMoreData() {
+    public boolean hasMoreData() {
         return rendered != -1;
     }
 

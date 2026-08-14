@@ -1163,6 +1163,16 @@ final public class PDF {
     }
 
     /**
+     * Sets the PDF producer string (the application that produced this PDF).
+     * Defaults to "PDFjet v8.0.3". Use this to white-label exported PDFs.
+     *
+     * @param producer the producer.
+     */
+    public void setProducer(String producer) {
+        this.producer = producer;
+    }
+
+    /**
      * Sets the PDF page layout.
      *
      * @param pageLayout the page layout.
