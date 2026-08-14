@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+//TODO move multi line handline to Cell subclass for efficiency.
 public class BigTable {
     private final PDF pdf;
     private Page page;
